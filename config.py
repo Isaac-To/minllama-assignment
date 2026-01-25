@@ -121,7 +121,7 @@ class PretrainedConfig(object):
       kwargs.pop(key, None)
 
     if return_unused_kwargs:
-      return config, kwargs
+      return config, kwargs # type: ignore
     else:
       return config
 
@@ -159,7 +159,7 @@ class PretrainedConfig(object):
         use_auth_token=use_auth_token,
       )
       # Load config dict
-      config_dict = cls._dict_from_json_file(resolved_config_file)
+      config_dict = cls._dict_from_json_file(resolved_config_file) # type: ignore
 
     except EnvironmentError as err:
       msg = (
@@ -185,7 +185,7 @@ class LlamaConfig(PretrainedConfig):
     self,
     vocab_size: int = 32000,
     dim: int = 512,
-    dropout: int = 0.0,
+    dropout: float = 0.0,
     n_layers: int = 8,
     n_heads: int = 8,
     n_kv_heads: Optional[int] = 8,

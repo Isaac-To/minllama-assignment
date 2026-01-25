@@ -25,7 +25,7 @@ class AdamW(Optimizer):
         defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, correct_bias=correct_bias)
         super().__init__(params, defaults)
 
-    def step(self, closure: Callable = None):
+    def step(self, closure: Callable = None): # type: ignore
         loss = None
         if closure is not None:
             loss = closure()

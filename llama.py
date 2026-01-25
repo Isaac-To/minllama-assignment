@@ -173,7 +173,7 @@ class LlamaLayer(nn.Module):
         self.attention = Attention(config)
         self.feed_forward = FeedForward(
             dim=config.dim,
-            hidden_dim=config.hidden_dim,
+            hidden_dim=config.hidden_dim, # type: ignore
             multiple_of=config.multiple_of,
             dropout=config.dropout,
         )
@@ -254,7 +254,7 @@ class Llama(LlamaPreTrainedModel):
             # inference-time mini-optimization: only forward the output on the very last position
             logits = self.output(h[:, [-1], :]) # note: using list [-1] to preserve the time dim
 
-        return logits, h
+        return logits, h # type: ignore
 
     @torch.inference_mode()
     def generate(self, idx, max_new_tokens, temperature=1.0):
@@ -303,9 +303,9 @@ def load_pretrained(checkpoint):
 
   torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
   torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
-  device_type = 'cuda' if 'cuda' in device else 'cpu' # for later use in torch.autocast
+  device_type = 'cuda' if 'cuda' in device else 'mps' if 'mps' in device else 'cpu' # for later use in torch.autocast
   ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torch.float16}[dtype]
-  ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=device_type, dtype=ptdtype)
+  ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=device_type, dtype=ptdtype) # type: ignore
 
   # init from a model saved in a specific directory
   checkpoint_dict = torch.load(checkpoint, map_location=device)
