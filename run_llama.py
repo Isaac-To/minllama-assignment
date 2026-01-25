@@ -131,7 +131,16 @@ def save_model(model, optimizer, args, config, filepath):
 	print(f"save the model to {filepath}")
 
 def train(args):
-	device = torch.device('cuda') if args.use_gpu else torch.device('cpu')
+	if args.use_gpu:
+		if torch.cuda.is_available():
+			device = torch.device('cuda')
+		elif torch.backends.mps.is_available():
+			device = torch.device('mps')
+		else:
+			print("GPU requested but not available, falling back to CPU")
+			device = torch.device('cpu')
+	else:
+		device = torch.device('cpu')
 	#### Load data
 	# create the data and its corresponding datasets and dataloader
 	tokenizer = Tokenizer(args.max_sentence_len)
@@ -198,8 +207,21 @@ def train(args):
 
 def generate_sentence(args, prefix, outfile, max_new_tokens = 75, temperature = 0.0):
 	with torch.no_grad():
-		device = torch.device('cuda') if args.use_gpu else torch.device('cpu')
-		ctx = torch.amp.autocast(device_type="cuda", dtype=torch.float32) if args.use_gpu else nullcontext()
+		if args.use_gpu:
+			if torch.cuda.is_available():
+				device = torch.device('cuda')
+				device_type = 'cuda'
+			elif torch.backends.mps.is_available():
+				device = torch.device('mps')
+				device_type = 'mps'
+			else:
+				print("GPU requested but not available, falling back to CPU")
+				device = torch.device('cpu')
+				device_type = 'cpu'
+		else:
+			device = torch.device('cpu')
+			device_type = 'cpu'
+		ctx = torch.amp.autocast(device_type=device_type, dtype=torch.float32) if args.use_gpu and device_type != 'cpu' else nullcontext()
 		llama = load_pretrained(args.pretrained_model_path)
 		llama = llama.to(device)
 		print(f"load model from {args.pretrained_model_path}")
