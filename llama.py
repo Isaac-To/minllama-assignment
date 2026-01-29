@@ -46,8 +46,7 @@ class RMSNorm(torch.nn.Module):
         """
         # todo
         # raise NotImplementedError
-        norm_x = torch.sqrt(torch.mean(x**2, dim=-1, keepdim=True) + self.eps)
-        return x / norm_x
+        return x / (torch.sqrt(torch.mean(x**2, dim=-1, keepdim=True) + self.eps))
 
     def forward(self, x):
         """
@@ -108,13 +107,16 @@ class Attention(nn.Module):
         """
         # todo
         # raise NotImplementedError
-        attn_scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(
-            self.head_dim
+        return (
+            self.attn_dropout(
+                F.softmax(
+                    torch.matmul(query, key.transpose(-2, -1))
+                    / math.sqrt(self.head_dim),
+                    dim=-1,
+                )
+            )
+            @ value
         )
-        attn_probs = F.softmax(attn_scores, dim=-1)
-        attn_probs = self.attn_dropout(attn_probs)
-        output = torch.matmul(attn_probs, value)
-        return output
 
     def forward(self, x: torch.Tensor):
         """
@@ -217,10 +219,10 @@ class LlamaLayer(nn.Module):
         # raise NotImplementedError
         norm_x = self.attention_norm(x)
         attn_output = self.attention(norm_x)
-        x = x + attn_output
+        x += attn_output
         norm_x = self.ffn_norm(x)
         ffn_output = self.feed_forward(norm_x)
-        x = x + ffn_output
+        x += ffn_output
         return x
 
 
