@@ -170,7 +170,7 @@ def train(args):
 
 	lr = args.lr
 	## specify the optimizer
-	optimizer = AdamW(model.parameters(), lr=lr)
+	optimizer = AdamW(model.parameters(), lr=lr, weight_decay=args.weight_decay)
 	best_dev_acc = 0
 
 	## run for the specified number of epochs
@@ -348,6 +348,7 @@ def get_args():
 	parser.add_argument("--hidden_dropout_prob", type=float, default=0.3)
 	parser.add_argument("--lr", type=float, help="learning rate, default lr for 'pretrain': 1e-3, 'finetune': 1e-5",
 						default=2e-5)
+	parser.add_argument("--weight_decay", type=float, default=0.01, help="weight decay for AdamW optimizer")
 
 	args = parser.parse_args()
 	print(f"args: {vars(args)}")
