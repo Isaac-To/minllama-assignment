@@ -1,6 +1,7 @@
 from typing import Tuple
 import torch
 
+
 def reshape_for_broadcast(freqs_cis: torch.Tensor, x: torch.Tensor):
     """
     Helper function to reshape frequency tensor to have the same shape as the target tensor 'x'
@@ -22,6 +23,7 @@ def reshape_for_broadcast(freqs_cis: torch.Tensor, x: torch.Tensor):
     assert freqs_cis.shape == (x.shape[1], x.shape[-1])
     shape = [d if i == 1 or i == ndim - 1 else 1 for i, d in enumerate(x.shape)]
     return freqs_cis.view(shape)
+
 
 def apply_rotary_emb(
     query: torch.Tensor,
@@ -56,20 +58,38 @@ def apply_rotary_emb(
     # and Section 3 in https://arxiv.org/abs/2104.09864.
 
     # reshape xq and xk to match the complex representation
-    query_real, query_imag = query.float().reshape(query.shape[:-1] + (-1, 2)).unbind(-1)
+    query_real, query_imag = (
+        query.float().reshape(query.shape[:-1] + (-1, 2)).unbind(-1)
+    )
     key_real, key_imag = key.float().reshape(key.shape[:-1] + (-1, 2)).unbind(-1)
     # This separates each query/key vector into its odd and even indices (assuming *one-indexing*).
     # query_real contains q_1, q_3, q_5, ... and query_imag contains q_2, q_4, q_6, ...
 
     # First, compute the trigonometric values in the second and fourth columns in
     # slide 22 (linked above).
+    freq_seq = torch.arange(0, head_dim, 2, device=device, dtype=torch.float32)
+    inv_freq = 1.0 / (theta ** (freq_seq / head_dim))
+
+    positions = torch.arange(max_seq_len, device=device, dtype=torch.float32)
+    angles = torch.outer(positions, inv_freq)  # (max_seq_len, head_dim/2)
+
+    cos = torch.cos(angles[:seqlen])
+    sin = torch.sin(angles[:seqlen])
+
+    cos = reshape_for_broadcast(cos, query_real)
+    sin = reshape_for_broadcast(sin, query_real)
 
     # Then, combine these trigonometric values with the tensors query_real, query_imag,
     # key_real, and key_imag.
-
-    raise NotImplementedError
-
+    # raise NotImplementedError
     query_out = None
     key_out = None
+
+    freqs = torch.complex(cos, sin)
+    query_out = torch.view_as_real(torch.complex(query_real, query_imag) * freqs)
+    query_out = query_out.flatten(-2).type_as(query)
+
+    key_out = torch.view_as_real(torch.complex(key_real, key_imag) * freqs)
+    key_out = key_out.flatten(-2).type_as(key)
     # Return the rotary position embeddings for the query and key tensors
     return query_out, key_out
